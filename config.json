@@ -1,16 +1,14 @@
 {
   "media": {
     "input_path": "M:/OBSVideos/Goitacaz/2025-09-12_15-00-47-Goitacaz.mp4",
-    "wav_output": "outputs/audio_extracted.wav",
     "ffmpeg": {
-      "executable": "ffmpeg",
       "sample_rate": 16000,
-      "channels": 1,
-      "format": "wav"
+      "channels": 1
     }
   },
   "whisper": {
-    "model": "large-v3",
+    "model": "small",
+    "model_disabled": "large-v3",
     "device": "auto",
     "compute_type": "float16",
     "batch_size": 8,
@@ -18,20 +16,14 @@
     "vad_filter": true,
     "language": "pt",
     "condition_on_previous_text": false,
-    "word_timestamps": true,
-    "output_transcript_json": "outputs/transcript_with_words.json"
-  },
-  "diarization": {
-    "backend": "resemblyzer",
-    "num_speakers": 3,
-    "window_size": 1.0,
-    "hop": 0.5,
-    "clustering": "kmeans",
-    "output_diarized_json": "outputs/diarized_transcript.json",
-    "output_srt": "outputs/diarized_by_speaker.srt"
+    "word_timestamps": true
   },
   "output": {
-    "dir": "outputs",
-    "save_intermediate_wav": true
+    "base_dir": ".cache",
+    "audio_subdir": "audio",
+    "transcripts_subdir": "transcripts",
+    "save_intermediate_wav": true,
+    "json_indent": 2,
+    "hash_length": 16
   }
 }

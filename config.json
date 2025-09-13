@@ -1,6 +1,6 @@
 {
   "media": {
-    "input_path": "M:/OBSVideos/Goitacaz/2025-09-12_15-00-47-Goitacaz.mp4",
+    "input_path": "M:/OBSVideos/example.mp4",
     "ffmpeg": {
       "sample_rate": 16000,
       "channels": 1

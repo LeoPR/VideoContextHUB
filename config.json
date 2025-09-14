@@ -25,5 +25,19 @@
     "save_intermediate_wav": true,
     "json_indent": 2,
     "hash_length": 16
+  },
+  "diarization": {
+    "window_size": 1.0,
+    "hop": 0.5,
+    "min_window_dur": 0.25,
+    "merge_gap": 0.5,
+    "num_speakers": null,
+    "max_k": 10,
+    "out_dir": ".cache/diarization",
+    "hash_length": 16
+  },
+  "meta": {
+    "default_diarization_script": "extract_diarization.py",
+    "notes": "num_speakers=null => estimativa automática (silhouette/inertia). max_k limitado a 10."
   }
 }

@@ -29,6 +29,8 @@ import torchaudio
 import torchaudio.transforms as T
 import av
 
+from utils.audio_io import AudioWriter
+
 
 # Formatos de áudio comuns que o torchaudio costuma carregar bem.
 AUDIO_EXTS_TORCHAUDIO = {
@@ -260,18 +262,17 @@ class AudioExtractor:
         if c == self.target_channels:
             return wav
         if c > self.target_channels:
-            return wav[: self.target_channels, :]
+            return wav[: self.target_channels, : ]
         # c < target: replicar último canal
         rep = self.target_channels - c
         return torch.cat([wav, wav[-1:].repeat(rep, 1)], dim=0)
 
     def _save_wav_pcm16(self, wav: torch.Tensor, sample_rate: int, out: Path):
         """
-        Salva WAV PCM16 sem depender de torchaudio.save (usa módulo wave da stdlib).
+        Salva WAV PCM16 usando utils.audio_io.AudioWriter (soundfile/libsndfile).
         Espera wav: torch.Tensor [channels, samples] float em [-1, 1].
+        Converte para numpy float32 e escreve no formato (frames, channels).
         """
-        import wave
-
         out.parent.mkdir(parents=True, exist_ok=True)
 
         # Garantir tensor float32 na CPU
@@ -288,21 +289,14 @@ class AudioExtractor:
         # Clip em [-1, 1]
         arr = np.clip(arr, -1.0, 1.0)
 
-        # Converter para int16 PCM
-        int16 = (arr * 32767.0).astype(np.int16)
+        # Converter para formato esperado pelo AudioWriter: (frames, channels)
+        frames = arr.T  # shape (samples, channels)
 
-        # Transpor para (samples, channels)
-        frames = int16.T  # shape (samples, channels)
-
-        n_channels = frames.shape[1]
-        sampwidth = 2  # bytes por sample (16-bit)
-        n_frames = frames.shape[0]
-
-        with wave.open(str(out), "wb") as wf:
-            wf.setnchannels(int(n_channels))
-            wf.setsampwidth(int(sampwidth))
-            wf.setframerate(int(sample_rate))
-            wf.writeframes(frames.tobytes())
+        channels = frames.shape[1]
+        # Usar AudioWriter para escrever com subtype PCM_16
+        with AudioWriter(out, samplerate=int(sample_rate), channels=int(channels), subtype="PCM_16") as w:
+            # AudioWriter espera 1D (frames,) ou 2D (frames, channels)
+            w.write(frames.astype(np.float32, copy=False))
 
     # ---------------------------
     # Pipeline principal
@@ -357,7 +351,7 @@ class AudioExtractor:
         wav = self._match_channels(wav)
         wav, final_sr = self._resample_if_needed(wav, sr)
 
-        # 4) Salvar WAV PCM16 (sem torchaudio.save)
+        # 4) Salvar WAV PCM16 (usando AudioWriter)
         self._save_wav_pcm16(wav, final_sr, out)
 
         # 5) Log

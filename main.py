@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# coding: utf-8
 """
 main_v2.py
 
@@ -7,7 +8,7 @@ Fluxo integrado revisado para evitar duplicação de "cache" no caminho:
 - Gera/obtém WAV compatível via AudioExtractor (extract_audio.py) e salva em <base_dir>/<audio_subdir>
 - Transcreve em streaming via V2TExtractor (extract_v2t.py) e salva em <base_dir>/<transcripts_subdir>
 """
-
+from __future__ import annotations
 from pathlib import Path
 import argparse
 import hashlib
@@ -17,8 +18,7 @@ import sys
 from extract_audio import AudioExtractor, AudioExtractionError
 from extract_v2t import V2TExtractor
 
-import torchaudio
-
+from utils.audio_io import AudioReader
 
 def load_config(config_path: str | Path = "config.json") -> dict:
     p = Path(config_path)
@@ -29,19 +29,28 @@ def load_config(config_path: str | Path = "config.json") -> dict:
 
 
 def is_wav_compatible(path: Path, target_sr: int, target_channels: int) -> bool:
+    """
+    Verifica se o arquivo WAV no caminho já está no formato desejado.
+    Usa AudioReader.info() (soundfile/libsndfile) para obter samplerate, channels e subtype.
+    Retorna True apenas se samplerate e channels coincidirem e se o subtype indicar PCM 16-bit.
+    """
     try:
-        info = torchaudio.info(str(path))
-        sr = int(info.sample_rate) if info.sample_rate is not None else None
-        ch = int(getattr(info, "num_channels", None)) if getattr(info, "num_channels", None) is not None else None
-        bps = int(getattr(info, "bits_per_sample", -1)) if getattr(info, "bits_per_sample", None) is not None else None
-        enc = getattr(info, "encoding", None) or getattr(info, "format", None) or ""
-        enc = enc.upper()
+        with AudioReader(path) as r:
+            info = r.info()
+        sr = info.get("samplerate")
+        ch = info.get("channels")
+        subtype = (info.get("subtype") or "").upper()
 
         if sr != target_sr or ch != target_channels:
             return False
 
-        is_pcm16 = (bps == 16) or ("PCM_S" in enc or "PCM" in enc)
-        return bool(is_pcm16)
+        # Heurística para detectar PCM16 a partir de subtype; adaptável se necessário.
+        # Exemplos de subtype possíveis: "PCM_16", "PCM_S16", "PCM_24", "FLOAT", etc.
+        if "PCM" in subtype and "16" in subtype:
+            return True
+
+        # Se não houver informação de subtype, conservadoramente retorna False.
+        return False
     except Exception:
         return False
 
